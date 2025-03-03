@@ -456,10 +456,6 @@ static inline void list_move_tail(struct list_head *node,
         safe = list_entry(entry->member.next, typeof(*entry), member); \
          &entry->member != (head); entry = safe,                       \
         safe = list_entry(safe->member.next, typeof(*entry), member))
-#else
-#define list_for_each_entry_safe(entry, safe, head, member)         \
-    for (entry = safe = (void *) 1; sizeof(struct { int i : -1; }); \
-         ++(entry), ++(safe))
 #endif
 
 #undef __LIST_HAVE_TYPEOF
