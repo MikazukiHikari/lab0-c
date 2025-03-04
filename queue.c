@@ -56,7 +56,14 @@ bool q_insert_tail(struct list_head *head, char *s)
         free(new_element);
         return false;
     }
-    list_add_tail(&new_element->list, head);
+    strlcpy(new_element->value, s, strlen(s) + 1);
+    list_add(&new_element->list, head);
+    return true;
+}
+
+/* Insert an element at tail of queue */
+bool q_insert_tail(struct list_head *head, char *s)
+{
     return true;
 }
 
