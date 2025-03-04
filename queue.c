@@ -21,10 +21,6 @@ void q_free(struct list_head *head)
     if (!head) {
         return;
     }
-    if (list_empty(head)) {
-        free(head);
-        return;
-    }
     struct list_head *node, *safe;
     list_for_each_safe (node, safe, head) {
         element_t *current_element = list_entry(node, element_t, list);
@@ -36,6 +32,20 @@ void q_free(struct list_head *head)
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (!head || !s) {
+        return false;
+    }
+    element_t *new_element = (element_t *) malloc(sizeof(element_t));
+    if (!new_element) {
+        return false;
+    }
+    new_element->value = malloc(strlen(s) + 1);
+    if (!new_element->value) {
+        free(new_element);
+        return false;
+    }
+    strlcpy(new_element->value, s, strlen(s) + 1);
+    list_add(&new_element->list, head);
     return true;
 }
 
