@@ -45,11 +45,12 @@ bool q_insert_head(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = strdup(s);
+    new_element->value = malloc(strlen(s) + 1);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
+    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add(&new_element->list, head);
     return true;
 }
@@ -64,11 +65,12 @@ bool q_insert_tail(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = strdup(s);
+    new_element->value = malloc(strlen(s) + 1);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
+    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add_tail(&new_element->list, head);
     return true;
 }
@@ -170,7 +172,21 @@ bool q_delete_dup(struct list_head *head)
 }
 
 /* Swap every two adjacent nodes */
-void q_swap(struct list_head *head) {}
+void q_swap(struct list_head *head)
+{
+    if (!head) {
+        return;
+    }
+    if (list_empty(head) || list_is_singular(head))
+        return;
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head) {
+        if (safe != head) {
+            list_move(node, safe);
+            safe = node->next;
+        }
+    }
+}
 
 /* Reverse elements in queue */
 void q_reverse(struct list_head *head) {}
