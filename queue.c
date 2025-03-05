@@ -45,12 +45,11 @@ bool q_insert_head(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = malloc(strlen(s) + 1);
+    new_element->value = strdup(s);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
-    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add(&new_element->list, head);
     return true;
 }
@@ -65,12 +64,11 @@ bool q_insert_tail(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = malloc(strlen(s) + 1);
+    new_element->value = strdup(s);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
-    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add_tail(&new_element->list, head);
     return true;
 }
@@ -80,12 +78,10 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-    if (sp) {
-        memset(sp, '\0', bufsize);
-        strncpy(sp, container_of(head->next, element_t, list)->value,
-                bufsize - 1);
-    }
     element_t *remove_element = list_entry(head->next, element_t, list);
+    if (sp) {
+        strlcpy(sp, remove_element->value, bufsize);
+    }
     list_del(head->next);
     return remove_element;
 }
@@ -95,12 +91,10 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-    if (sp) {
-        memset(sp, '\0', bufsize);
-        strncpy(sp, container_of(head->prev, element_t, list)->value,
-                bufsize - 1);
-    }
     element_t *remove_element = list_entry(head->prev, element_t, list);
+    if (sp) {
+        strlcpy(sp, remove_element->value, bufsize);
+    }
     list_del(head->prev);
     return remove_element;
 }
@@ -189,12 +183,45 @@ void q_swap(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (q_size(head) == 0 || q_size(head) == 1) {
+        return;
+    }
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head) {
+        node->next = node->prev;
+        node->prev = safe;
+    }
+    node->next = node->prev;
+    node->prev = safe;
+    return;
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (q_size(head) == 0 || q_size(head) == 1) {
+        return;
+    }
+    struct list_head *node;
+
+    LIST_HEAD(tmp);
+    LIST_HEAD(new_head);
+
+    for (int i = 0; i < q_size(head); i += k) {
+        int j = 0;
+        list_for_each (node, head) {
+            if (j >= k) {
+                break;
+            }
+            j++;
+        }
+        list_cut_position(&tmp, head, node->prev);
+        q_reverse(&tmp);
+        list_splice_tail_init(&tmp, &new_head);
+    }
+    list_splice_init(&new_head, head);
 }
 
 /* Sort elements of queue in ascending/descending order */
