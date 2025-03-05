@@ -51,12 +51,11 @@ bool q_insert_tail(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = malloc(strlen(s) + 1);
+    new_element->value = strdup(s);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
-    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add(&new_element->list, head);
     return true;
 }
@@ -71,12 +70,11 @@ bool q_insert_tail(struct list_head *head, char *s)
     if (!new_element) {
         return false;
     }
-    new_element->value = malloc(strlen(s) + 1);
+    new_element->value = strdup(s);
     if (!new_element->value) {
         free(new_element);
         return false;
     }
-    strlcpy(new_element->value, s, strlen(s) + 1);
     list_add_tail(&new_element->list, head);
     return true;
 }
@@ -86,10 +84,12 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-    if (sp) {
-        strlcpy(sp, container_of(head->next, element_t, list)->value, bufsize);
-    }
     element_t *remove_element = list_entry(head->next, element_t, list);
+    if (sp) {
+        memset(sp, '\0', bufsize);
+        strncpy(sp, container_of(head->next, element_t, list)->value,
+                bufsize - 1);
+    }
     list_del(head->next);
     return remove_element;
 }
@@ -99,10 +99,12 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-    if (sp) {
-        strlcpy(sp, container_of(head->prev, element_t, list)->value, bufsize);
-    }
     element_t *remove_element = list_entry(head->prev, element_t, list);
+    if (sp) {
+        memset(sp, '\0', bufsize);
+        strncpy(sp, container_of(head->prev, element_t, list)->value,
+                bufsize - 1);
+    }
     list_del(head->prev);
     return remove_element;
 }
@@ -147,93 +149,21 @@ void q_reverse(struct list_head *head)
         return;
     }
     struct list_head *node, *safe;
-    list_for_each_safe(node, safe, head) {
-        node->next = node->prev;
-        node->prev = safe;
+    list_for_each_safe (node, safe, head) {
+        if (safe != head) {
+            list_move(node, safe);
+            safe = node->next;
+        }
     }
-    node->next = node->prev;
-    node->prev = safe;
-    return;
 }
+
+/* Reverse elements in queue */
+void q_reverse(struct list_head *head) {}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    if (q_size(head) == 0 || q_size(head) == 1) {
-        return;
-    }
-    struct list_head *node;
-
-    LIST_HEAD(tmp);
-    LIST_HEAD(new_head);
-
-    for (int i = 0; i < q_size(head); i += k) {
-        int j = 0;
-        list_for_each(node, head) {
-            if (j >= k) {
-                break;
-            }
-            j++;
-        }
-        list_cut_position(&tmp, head, node->prev);
-        q_reverse(&tmp);
-        list_splice_tail_init(&tmp, &new_head);
-    }
-    list_splice_init(&new_head, head);
-}
-
-struct list_head *merge_two_list(struct list_head *l1,
-                                 struct list_head *l2,
-                                 bool descend)
-{
-    if (!l2) {
-        return l1;
-    } else if (!l1) {
-        return l2;
-    }
-    struct list_head dummy;
-    struct list_head *temp = &dummy;
-    dummy.next = NULL;
-    dummy.prev = NULL;
-    while (l1 && l2) {
-        const element_t *node1 = list_entry(l1, element_t, list);
-        const element_t *node2 = list_entry(l2, element_t, list);
-
-        if ((strcmp(node1->value, node2->value) <= 0) ^ descend) {
-            temp->next = l1;
-            temp = temp->next;
-            l1 = l1->next;
-        } else {
-            temp->next = l2;
-            temp = temp->next;
-            l2 = l2->next;
-        }
-    }
-    if (l1)
-        temp->next = l1;
-    if (l2)
-        temp->next = l2;
-    return dummy.next;
-}
-
-struct list_head *merge_sort_list(struct list_head *head, bool descend)
-{
-    if (!head || !head->next) {
-        return head;
-    }
-    struct list_head *fast = head->next;
-    struct list_head *slow = head;
-
-    while (fast && fast->next) {
-        slow = slow->next;
-        fast = fast->next->next;
-    }
-    fast = slow->next;
-    slow->next = NULL;
-
-    struct list_head *l1 = merge_sort_list(head, descend);
-    struct list_head *l2 = merge_sort_list(fast, descend);
-    return merge_two_list(l1, l2, descend);
+    // https://leetcode.com/problems/reverse-nodes-in-k-group/
 }
 
 /* Sort elements of queue in ascending/descending order */
