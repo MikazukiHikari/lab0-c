@@ -35,7 +35,7 @@ bool q_insert_head(struct list_head *head, char *s)
     if (!head || !s) {
         return false;
     }
-    element_t *new_element = (element_t *) malloc(sizeof(element_t));
+    element_t *new_element = malloc(sizeof(element_t));
     if (!new_element) {
         return false;
     }
@@ -55,7 +55,7 @@ bool q_insert_tail(struct list_head *head, char *s)
     if (!head || !s) {
         return false;
     }
-    element_t *new_element = (element_t *) malloc(sizeof(element_t));
+    element_t *new_element = malloc(sizeof(element_t));
     if (!new_element) {
         return false;
     }
@@ -74,10 +74,9 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head) || !sp || bufsize == 0)
         return NULL;
-    struct list_head *remove_node = head->next;
-    element_t *remove_element = list_entry(remove_node, element_t, list);
+    element_t *remove_element = container_of(head->next, element_t, list);
     strlcpy(sp, remove_element->value, bufsize);
-    list_del(remove_node);
+    list_del(head->next);
     return remove_element;
 }
 
@@ -86,10 +85,9 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head) || !sp || bufsize == 0)
         return NULL;
-    struct list_head *remove_node = head->prev;
-    element_t *remove_element = list_entry(remove_node, element_t, list);
+    element_t *remove_element = container_of(head->prev, element_t, list);
     strlcpy(sp, remove_element->value, bufsize);
-    list_del(remove_node);
+    list_del(head->prev);
     return remove_element;
 }
 
@@ -110,14 +108,52 @@ int q_size(struct list_head *head)
 /* Delete the middle node in queue */
 bool q_delete_mid(struct list_head *head)
 {
-    // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+    if (!head || list_empty(head))
+        return false;
+    struct list_head *forward = head->next;
+    struct list_head *backward = head->prev;
+    while (forward != backward && forward->next != backward) {
+        forward = forward->next;
+        backward = backward->prev;
+    }
+    list_del(backward);
+    free(list_entry(backward, element_t, list)->value);
+    free(list_entry(backward, element_t, list));
     return true;
 }
 
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head)) {
+        return false;
+    }
+    struct list_head *node, *safe;
+    bool isduplicate = false;
+    list_for_each_safe (node, safe, head) {
+        element_t *cur = list_entry(node, element_t, list);
+        if (safe != head) {
+            const element_t *nex = list_entry(safe, element_t, list);
+            if (!strcmp(cur->value, nex->value)) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = true;
+            } else if (isduplicate) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = false;
+            }
+        } else {
+            if (isduplicate) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = false;
+            }
+        }
+    }
     return true;
 }
 
