@@ -176,15 +176,7 @@ void q_swap(struct list_head *head)
     struct list_head *node, *safe;
     list_for_each_safe (node, safe, head) {
         if (safe != head) {
-            node->next = safe->next;
-            safe->next->prev = node;
-
-            safe->prev = node->prev;
-            node->prev->next = safe;
-
-            safe->next = node;
-            node->prev = safe;
-
+            list_move(node, safe);
             safe = node->next;
         }
     }
