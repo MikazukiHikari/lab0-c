@@ -22,7 +22,7 @@ void q_free(struct list_head *head)
         return;
     }
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         element_t *current_element = list_entry(node, element_t, list);
         q_release_element(current_element);
     }
@@ -101,7 +101,7 @@ int q_size(struct list_head *head)
     }
     int number = 0;
     struct list_head *node;
-    list_for_each (node, head) {
+    list_for_each(node, head) {
         number++;
     }
     return number;
@@ -132,7 +132,7 @@ bool q_delete_dup(struct list_head *head)
     }
     struct list_head *node, *safe;
     bool isduplicate = false;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         element_t *cur = list_entry(node, element_t, list);
         if (safe != head) {
             const element_t *nex = list_entry(safe, element_t, list);
@@ -168,7 +168,7 @@ void q_swap(struct list_head *head)
     if (list_empty(head) || list_is_singular(head))
         return;
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         if (safe != head) {
             list_move(node, safe);
             safe = node->next;
@@ -183,7 +183,7 @@ void q_reverse(struct list_head *head)
         return;
     }
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         node->next = node->prev;
         node->prev = safe;
     }
@@ -205,7 +205,7 @@ void q_reverseK(struct list_head *head, int k)
 
     for (int i = 0; i < q_size(head); i += k) {
         int j = 0;
-        list_for_each (node, head) {
+        list_for_each(node, head) {
             if (j >= k) {
                 break;
             }
@@ -374,4 +374,26 @@ int q_merge(struct list_head *head, bool descend)
     node->q->prev = cur;
 
     return q_size(node->q);
+}
+
+bool q_shuffle(struct list_head *head)
+{
+    int len = q_size(head);
+    if (len <= 1) {
+        return true;
+    }
+    // Fisher-Yates shuffle algorithm
+    for (int j = len - 1; j > 0; j--) {
+        int rand_idx = rand() % (j + 1);
+        struct list_head *node;
+        list_for_each(node, head) {
+            if (rand_idx == 0) {
+                break;
+            }
+            rand_idx--;
+        }
+        list_del(node);
+        list_add_tail(node, head);
+    }
+    return true;
 }
