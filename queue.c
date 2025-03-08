@@ -28,7 +28,7 @@ void q_free(struct list_head *head)
         return;
     }
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         element_t *current_element = list_entry(node, element_t, list);
         q_release_element(current_element);
     }
@@ -112,7 +112,15 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    return -1;
+    if (!head || list_empty(head)) {
+        return 0;
+    }
+    int number = 0;
+    struct list_head *node;
+    list_for_each (node, head) {
+        number++;
+    }
+    return number;
 }
 
 /* Delete the middle node in queue */
@@ -135,7 +143,35 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head)) {
+        return false;
+    }
+    struct list_head *node, *safe;
+    bool isduplicate = false;
+    list_for_each_safe (node, safe, head) {
+        element_t *cur = list_entry(node, element_t, list);
+        if (safe != head) {
+            const element_t *nex = list_entry(safe, element_t, list);
+            if (!strcmp(cur->value, nex->value)) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = true;
+            } else if (isduplicate) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = false;
+            }
+        } else {
+            if (isduplicate) {
+                list_del(node);
+                free(cur->value);
+                free(cur);
+                isduplicate = false;
+            }
+        }
+    }
     return true;
 }
 
@@ -149,7 +185,7 @@ void q_reverse(struct list_head *head)
         return;
     }
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         if (safe != head) {
             list_move(node, safe);
             safe = node->next;
@@ -158,12 +194,45 @@ void q_reverse(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (q_size(head) == 0 || q_size(head) == 1) {
+        return;
+    }
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head) {
+        node->next = node->prev;
+        node->prev = safe;
+    }
+    node->next = node->prev;
+    node->prev = safe;
+    return;
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (q_size(head) == 0 || q_size(head) == 1) {
+        return;
+    }
+    struct list_head *node;
+
+    LIST_HEAD(tmp);
+    LIST_HEAD(new_head);
+
+    for (int i = 0; i < q_size(head); i += k) {
+        int j = 0;
+        list_for_each (node, head) {
+            if (j >= k) {
+                break;
+            }
+            j++;
+        }
+        list_cut_position(&tmp, head, node->prev);
+        q_reverse(&tmp);
+        list_splice_tail_init(&tmp, &new_head);
+    }
+    list_splice_init(&new_head, head);
 }
 
 struct list_head *merge_two_list(struct list_head *l1,
@@ -296,4 +365,26 @@ int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
     return 0;
+}
+
+bool q_shuffle(struct list_head *head)
+{
+    int len = q_size(head);
+    if (len <= 1) {
+        return true;
+    }
+    // Fisher-Yates shuffle algorithm
+    for (int j = len - 1; j > 0; j--) {
+        int rand_idx = rand() % (j + 1);
+        struct list_head *node;
+        list_for_each(node, head) {
+            if (rand_idx == 0) {
+                break;
+            }
+            rand_idx--;
+        }
+        list_del(node);
+        list_add_tail(node, head);
+    }
+    return true;
 }
