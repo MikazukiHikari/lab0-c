@@ -60,37 +60,6 @@ static void __attribute__((noreturn)) die(void)
     exit(111);
 }
 
-static int64_t percentile(const int64_t *a_sorted, double which, size_t size)
-{
-    assert(which >= 0 && which <= 1.0);
-    size_t pos = (size_t) (which * size);
-    return a_sorted[pos];
-}
-
-/* leverages the fact that comparison expressions return 1 or 0. */
-static int cmp(const void *aa, const void *bb)
-{
-    int64_t a = *(const int64_t *) aa, b = *(const int64_t *) bb;
-    return (a > b) - (a < b);
-}
-
-/* This function is used to set different thresholds for cropping measurements.
- * To filter out slow measurements, we keep only the fastest ones by a
- * complementary exponential decay scale as thresholds for cropping
- * measurements: threshold(x) = 1 - 0.5^(10 * x / N_MEASURES), where x is the
- * counter of the measurement.
- */
-static void prepare_percentiles(int64_t *exec_times, int64_t *percentiles)
-{
-    qsort(exec_times, N_MEASURES, sizeof(int64_t), cmp);
-
-    for (size_t i = 0; i < NUM_PERCENTILES; i++) {
-        percentiles[i] = percentile(
-            exec_times, 1 - (pow(0.5, 10 * (double) (i + 1) / NUM_PERCENTILES)),
-            N_MEASURES);
-    }
-}
-
 static void differentiate(int64_t *exec_times,
                           const int64_t *before_ticks,
                           const int64_t *after_ticks)
@@ -103,7 +72,7 @@ static void update_statistics(const int64_t *exec_times,
                               uint8_t *classes,
                               int64_t *percentiles)
 {
-    for (size_t i = DROP_SIZE; i < N_MEASURES - DROP_SIZE; i++) {
+    for (size_t i = 5; i < N_MEASURES; i++) {
         int64_t difference = exec_times[i];
         /* CPU cycle counter overflowed or dropped measurement */
         if (difference <= 0)
@@ -195,8 +164,7 @@ static bool doit(int mode)
 
     bool ret = measure(before_ticks, after_ticks, input_data, mode);
     differentiate(exec_times, before_ticks, after_ticks);
-    prepare_percentiles(exec_times, percentiles);
-    update_statistics(exec_times, classes, percentiles);
+    update_statistics(exec_times, classes);
     ret &= report();
 
     free(before_ticks);
