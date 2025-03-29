@@ -130,7 +130,109 @@ get_all_match_positions() {
   done <<< "$targets"
 }
 
-#
+KNOWN_TRAILERS_BY=(
+  'Signed-off-by'
+  'Reviewed-by'
+  'Co-authored-by'
+  'Acked-by'
+  'Suggested-by'
+  'Tested-by'
+  'Reported-by'
+)
+
+# Build regex for detecting commit trailers.
+build_commit_trailer_regex() {
+  local -a keys specials standalones trailers
+  local _ each key separators
+
+  # Get the trailer separators from git config (default to ':' if not set)
+  separators=$(git config --get trailer.separators || echo ':')
+
+  # Predefined trailer keys.
+  trailers=(
+    'CC' 'Change-Id' 'Closes'
+    'Acked-by' 'Co-authored-by' 'Reported-by' 'Reviewed-by'
+    'Signed-off-by' 'Suggested-by' 'Tested-by'
+  )
+
+  trailers_test=(
+    'CC' 'Change-Id' 'Closes'
+    "${KNOWN_TRAILERS_BY[@]}"
+  )
+  # Standalone keys (those that do not require a value).
+  standalones=(
+    '(Doc|Upgrade|Security)Impact'
+    "Git-Dch[$separators] (Ignore|Short|Full)"
+  )
+
+
+  # Read custom trailer keys from git config and add them either to specials or trailers.
+  # This loop reads lines matching 'trailer.*.key'.
+  while read -r _ key; do
+    if [[ "$key" =~ -by$ ]]; then
+      trailers_by+=("$key")
+      continue
+    fi
+
+    for each in "${trailers[@]}" "${specials[@]}"; do
+      [[ "$key" == "$each" ]] && continue 2
+    done
+
+    if [[ $key =~ [${separators}]$ ]]; then
+      specials+=("$key")
+    else
+      trailers+=("$key")
+    fi
+  done < <(git config --get-regexp 'trailer.*.key')
+
+  if [[ ${#trailers_by[@]} -eq 0 ]]; then
+    trailers_by=("${KNOWN_TRAILERS_BY[@]}")
+  fi
+
+  # Possible trailers :
+  # - Acked-by
+  # - Co-authored-by
+  # - Reported-by
+  # - Reviewed-by
+  # - Signed-off-by
+  # - Suggested-by
+  # - Tested-by
+  TRAILERS_BY_REGEX="/($(IFS='|'; echo "${trailers_by[*]}" | tr '[:upper:]' '[:lower:]'))/"
+  # Begin constructing the regex.
+  TRAILER_REGEX='^('
+
+  # Append trailer keys (with values).
+  if ((${#trailers[@]} > 0)); then
+    TRAILER_REGEX+='(('
+    for each in "${trailers[@]}"; do
+      TRAILER_REGEX+="$each|"
+    done
+    # Remove the trailing pipe, then add a separator and blank space pattern.
+    TRAILER_REGEX="${TRAILER_REGEX%|})[$separators][[:blank:]]*)"
+  fi
+
+  # Append standalone trailer keys.
+  if ((${#standalones[@]} > 0)); then
+    TRAILER_REGEX+='|(('
+    for each in "${standalones[@]}"; do
+      TRAILER_REGEX+="$each|"
+    done
+    TRAILER_REGEX="${TRAILER_REGEX%|})$)"
+  fi
+
+  # Append specials.
+  if ((${#specials[@]} > 0)); then
+    TRAILER_REGEX+='|('
+    for each in "${specials[@]}"; do
+      TRAILER_REGEX+="$each|"
+    done
+    TRAILER_REGEX="${TRAILER_REGEX%|})"
+  fi
+
+  # End the regex.
+  TRAILER_REGEX+=")"
+}
+
 # Validate the contents of the commmit msg agains the good commit guidelines.
 validate_commit_message() {
   # reset warnings
@@ -383,8 +485,7 @@ validate_commit_message() {
     -e "s/(['\"][^'\"]*['\"])//g" \
     -e "s/\bcommit[[:space:]]+[0-9a-fA-F]{7,40}\b/commit/g")
   MSG_FOR_SPELLCHECK=$(echo "$MSG_FOR_SPELLCHECK_LINE_FINDING" | sed '/^[[:space:]]*$/d')
-  
-  
+
   # Use aspell to list misspelled words according to American English, ignoring quoted text.
   MISSPELLED_WORDS=$(echo "$MSG_FOR_SPELLCHECK" | $ASPELL --lang=en --list --home-dir=scripts --personal=aspell-pws)
   if [ -n "$MISSPELLED_WORDS" ]; then
