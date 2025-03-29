@@ -188,7 +188,7 @@ static bool doit(int mode)
     bool ret = measure(before_ticks, after_ticks, input_data, mode);
     differentiate(exec_times, before_ticks, after_ticks);
     prepare_percentiles(exec_times);
-    update_statistics(exec_times, classes);
+    update_statistics(exec_times, classes, percentiles);
     ret &= report();
 
     free(before_ticks);
